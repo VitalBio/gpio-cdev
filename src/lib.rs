@@ -957,6 +957,19 @@ impl LineEventHandle {
         }
     }
 
+    /// Try to retrieve the next event from the kernel for this line
+    ///
+    /// This returns `Ok(None)` in the case where an event is not ready to read,
+    /// as indicated by the underlying read returning `EAGAIN`.
+    pub fn try_get_event(&self) -> Result<Option<LineEvent>> {
+        match self.read_event() {
+            Ok(Some(event)) => Ok(Some(event)),
+            Ok(None) => Err(event_err(nix::Error::Sys(nix::errno::Errno::EIO))),
+            Err(nix::Error::Sys(nix::errno::Errno::EAGAIN)) => Ok(None),
+            Err(e) => Err(event_err(e)),
+        }
+    }
+
     /// Request the current state of this Line from the kernel
     ///
     /// This value should be 0 or 1 which a "1" representing that
